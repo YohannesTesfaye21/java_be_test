@@ -138,5 +138,42 @@ public class EventController {
                     .body(new com.example.practical_test.dto.ErrorResponse(e.getMessage(), "INTERNAL_SERVER_ERROR"));
         }
     }
+    
+    @Operation(summary = "Get cache statistics", 
+        description = "Get LRU cache statistics (cache size, max size) for testing purposes")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Cache statistics retrieved successfully",
+            content = @Content(mediaType = "application/json", schema = @Schema(implementation = com.example.practical_test.dto.CacheStatsResponse.class))),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid or missing token")
+    })
+    @GetMapping("/cache/stats")
+    public ResponseEntity<?> getCacheStats() {
+        try {
+            int cacheSize = eventService.getCacheSize();
+            int maxCacheSize = eventService.getMaxCacheSize();
+            String message = String.format("Cache contains %d/%d entries", cacheSize, maxCacheSize);
+            return ResponseEntity.ok(new com.example.practical_test.dto.CacheStatsResponse(cacheSize, maxCacheSize, message));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new com.example.practical_test.dto.ErrorResponse(e.getMessage(), "INTERNAL_SERVER_ERROR"));
+        }
+    }
+    
+    @Operation(summary = "Clear cache", 
+        description = "Manually clear the LRU cache (for testing purposes)")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Cache cleared successfully"),
+        @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid or missing token")
+    })
+    @DeleteMapping("/cache")
+    public ResponseEntity<?> clearCache() {
+        try {
+            eventService.clearCache();
+            return ResponseEntity.ok(new com.example.practical_test.dto.CacheStatsResponse(0, 100, "Cache cleared successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new com.example.practical_test.dto.ErrorResponse(e.getMessage(), "INTERNAL_SERVER_ERROR"));
+        }
+    }
 }
 

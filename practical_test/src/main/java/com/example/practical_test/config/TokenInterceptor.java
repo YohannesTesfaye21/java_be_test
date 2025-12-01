@@ -22,8 +22,8 @@ public class TokenInterceptor extends OncePerRequestFilter {
         // Skip authentication for public endpoints
         String path = request.getRequestURI();
         
-        // Allow access to login endpoint
-        if (path.equals("/auth/login")) {
+        // Allow access to authentication endpoints (register and login)
+        if (path.equals("/auth/login") || path.equals("/auth/register")) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -42,14 +42,29 @@ public class TokenInterceptor extends OncePerRequestFilter {
         
         // Get token from Authorization header
         String authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+        if (authHeader == null || authHeader.trim().isEmpty()) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
-            response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"Missing or invalid Authorization header\"}");
+            response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"Missing Authorization header\"}");
             return;
         }
         
-        String token = authHeader.substring(7);
+        // Extract token - handle "Bearer token" or "Bearer Bearer token" cases
+        String token = authHeader.trim();
+        if (token.startsWith("Bearer ")) {
+            token = token.substring(7).trim(); // Remove "Bearer " prefix
+        }
+        // If there's still "Bearer " in the token (double Bearer case), remove it
+        if (token.startsWith("Bearer ")) {
+            token = token.substring(7).trim();
+        }
+        
+        if (token.isEmpty()) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"error\":\"Unauthorized\",\"message\":\"Missing token\"}");
+            return;
+        }
         
         try {
             authService.getUserIdFromToken(token);
